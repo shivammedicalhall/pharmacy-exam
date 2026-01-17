@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Examiner Portal - BCDA College</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* --- EXAMINER SPECIFIC STYLES --- */
+        .glass-container { max-width: 1000px !important; } /* Wider for monitoring */
+        
+        /* Navigation Tabs */
+        .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        .tab-btn { background: none; border: none; padding: 10px 20px; font-size: 1rem; cursor: pointer; color: #666; border-radius: 5px; transition: 0.3s; }
+        .tab-btn:hover { background: #eee; }
+        .tab-btn.active { background: #2563eb; color: white; font-weight: bold; }
+
+        /* CCTV Grid System */
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 10px;
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .feed-card {
+            background: #000;
+            border: 2px solid #444;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 4/3;
+        }
+
+        .feed-card img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .feed-info {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: rgba(0,0,0,0.8); color: white;
+            padding: 4px; font-size: 0.8rem; text-align: center;
+        }
+
+        /* Green border flash when data arrives */
+        .feed-active { border-color: #00C851 !important; box-shadow: 0 0 10px #00C851; }
+        
+        /* Status Indicators */
+        .status-badge { padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; }
+        .status-off { background: #ffebee; color: #c62828; }
+        .status-on { background: #e8f5e9; color: #2e7d32; }
+
+        /* Questions List */
+        .q-item { background: white; padding: 10px; margin: 5px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee; }
+    </style>
+</head>
+<body>
+
+    <div class="glass-container">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>Examiner Dashboard</h2>
+            <div id="exam
