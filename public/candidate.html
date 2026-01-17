@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candidate Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        #exam-paper { filter: blur(20px); pointer-events: none; transition: 0.5s; opacity: 0.5; }
+        .active-paper { filter: blur(0px) !important; pointer-events: all !important; opacity: 1 !important; }
+        #camera-view { width: 150px; border: 3px solid red; position: fixed; top: 20px; right: 20px; border-radius: 10px; z-index: 100;}
+        .face-detected { border-color: #00ff00 !important; }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen" class="glass-container">
+        <h2>Candidate Login</h2>
+        <input type="text" id="myName" placeholder="Name">
+        <input type="text" id="myRoll" placeholder="Roll No">
+        <button class="btn btn-success" onclick="login()">Login</button>
+        <p id="msg" style="color:red"></p>
+    </div>
+
+    <div id="exam-screen" style="display:none;">
+        <video id="camera-view" autoplay playsinline muted></video>
+        <div class="glass-container wide" id="exam-paper">
+            <h2 id="wait-msg">Waiting for Examiner to Start...</h2>
+            <div id="q-container"></div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" onclick="prevQ()">Previous</button>
+                <button class="btn btn-secondary" onclick="nextQ()">Next</button>
+            </div>
+        </div>
+    </div>
+    
+    <footer>&copy; 2026 BCDA College of Pharmacy.</footer>
+
+    <script>
+        const socket = io();
+        let questions = [];
+        let currentIdx = 0;
+        let examRunning = false;
+
+        // 1. Camera & Face Simulation (Basic Motion/Pixel check)
+        const video = document.getElementById('camera-view');
+        
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                
+                // Simple Check: If video is playing, unblur (For real face-api, we'd use a library)
+                setInterval(() => {
+                    if (video.srcObject && video.srcObject.active && examRunning) {
+                        document.getElementById('exam-paper').classList.add('active-paper');
+                        video.classList.add('face-detected');
+                    } else {
+                        document.getElementById('exam-paper').classList.remove('active-paper');
+                        video.classList.remove('face-detected');
+                    }
+                }, 500);
+            } catch (err) {
+                alert("Camera access denied! Exam blurred.");
+            }
+        }
+
+        // 2. Login
+        function login() {
+            const name = document.getElementById('myName').value;
+            const roll = document.getElementById('myRoll').value;
+            socket.emit('candidateLogin', {name, roll});
+        }
+
+        socket.on('loginSuccess', (data) => {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('exam-screen').style.display = 'block';
+            questions = data.questions;
+            examRunning = data.isExamActive;
+            renderQuestion();
+            checkExamStatus();
+            startCamera();
+        });
+
+        socket.on('loginFailed', () => {
+            document.getElementById('msg').innerText = "Invalid Name or Roll No!";
+        });
+
+        // 3. Real-time Updates from Examiner
+        socket.on('updateQuestions', (qs) => {
+            questions = qs;
+            renderQuestion();
+        });
+
+        socket.on('examStatusChange', (status) => {
+            examRunning = status;
+            checkExamStatus();
+        });
+
+        function checkExamStatus() {
+            const h2 = document.getElementById('wait-msg');
+            if (!examRunning) {
+                h2.innerText = "Exam Paused by Examiner";
+                h2.style.color = "red";
+                document.getElementById('exam-paper').classList.remove('active-paper');
+            } else {
+                h2.innerText = "Pharmaceutics-I Exam";
+                h2.style.color = "#333";
+            }
+        }
+
+        // 4. Navigation
+        function renderQuestion() {
+            if(!questions.length) return;
+            const q = questions[currentIdx];
+            document.getElementById('q-container').innerHTML = `
+                <h3>Q${currentIdx+1}: ${q.text}</h3>
+                <div class="options">
+                    <p>A) ${q.options.A}</p>
+                    <p>B) ${q.options.B}</p>
+                    <p>C) ${q.options.C}</p>
+                    <p>D) ${q.options.D}</p>
+                </div>
+            `;
+        }
+
+        function nextQ() { if(currentIdx < questions.length-1) { currentIdx++; renderQuestion(); } }
+        function prevQ() { if(currentIdx > 0) { currentIdx--; renderQuestion(); } }
+    </script>
+</body>
+</html>
